@@ -77,7 +77,7 @@ echo "🌐 Using Public IP: $PUBLIC_IP for API server access"
 sudo kubeadm init \
   --pod-network-cidr=10.244.0.0/16 \
   --apiserver-advertise-address=$PRIVATE_IP \
-  --apiserver-cert-extra-sans=$PUBLIC_IP \
+  --apiserver-cert-extra-sans=$PUBLIC_IP,$PRIVATE_IP \
   --node-name=$(hostname) \
   --ignore-preflight-errors=all
 
@@ -93,6 +93,13 @@ sudo mkdir -p /home/ubuntu/.kube
 sudo cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 sudo chown ubuntu:ubuntu /home/ubuntu/.kube/config
 sudo chmod 600 /home/ubuntu/.kube/config
+
+# Create remote kubeconfig with public IP for external access
+echo "🔑 Creating remote kubeconfig with public IP..."
+sudo cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config-remote
+sudo sed -i "s/$PRIVATE_IP/$PUBLIC_IP/g" /home/ubuntu/.kube/config-remote
+sudo chown ubuntu:ubuntu /home/ubuntu/.kube/config-remote
+sudo chmod 600 /home/ubuntu/.kube/config-remote
 
 # Verify kubeconfig was created
 echo "✅ Verifying kubeconfig creation..."
@@ -118,9 +125,62 @@ chown ubuntu:ubuntu /home/ubuntu/.bashrc /home/ubuntu/.profile
 echo "🌐 Installing Flannel CNI..."
 sudo -u ubuntu kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
-# Wait for Flannel to be ready
+# Wait for Flannel to be ready with better error handling
 echo "⏳ Waiting for Flannel to be ready..."
-sudo -u ubuntu kubectl wait --for=condition=ready pod -l app=flannel -n kube-flannel --timeout=300s
+echo "📋 Checking Flannel pods status..."
+
+# Function to check Flannel readiness
+check_flannel_ready() {
+    # Check if Flannel pods exist
+    if ! sudo -u ubuntu kubectl get pods -n kube-flannel --no-headers 2>/dev/null | grep -q "kube-flannel-ds"; then
+        echo "⚠️  Flannel pods not found yet, waiting..."
+        return 1
+    fi
+    
+    # Check if pods are running
+    if sudo -u ubuntu kubectl get pods -n kube-flannel --no-headers 2>/dev/null | grep -v "Running" | grep -q "kube-flannel-ds"; then
+        echo "⚠️  Some Flannel pods not running yet, waiting..."
+        return 1
+    fi
+    
+    # Try the original wait command
+    if sudo -u ubuntu kubectl wait --for=condition=ready pod -l app=flannel -n kube-flannel --timeout=60s 2>/dev/null; then
+        echo "✅ Flannel pods are ready!"
+        return 0
+    fi
+    
+    echo "⚠️  Wait command failed, checking pod status manually..."
+    return 1
+}
+
+# Retry logic for Flannel readiness
+max_attempts=10
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    echo "🔄 Attempt $attempt/$max_attempts to check Flannel readiness..."
+    
+    if check_flannel_ready; then
+        break
+    fi
+    
+    if [ $attempt -eq $max_attempts ]; then
+        echo "⚠️  Flannel readiness check failed after $max_attempts attempts"
+        echo "📋 Current Flannel pod status:"
+        sudo -u ubuntu kubectl get pods -n kube-flannel
+        echo "📋 Flannel pod logs (first pod):"
+        sudo -u ubuntu kubectl logs -n kube-flannel $(sudo -u ubuntu kubectl get pods -n kube-flannel -o jsonpath='{.items[0].metadata.name}' 2>/dev/null) --tail=20 2>/dev/null || echo "Could not get logs"
+        echo "⚠️  Continuing anyway - Flannel may still work..."
+        break
+    fi
+    
+    echo "⏳ Waiting 30 seconds before retry..."
+    sleep 30
+    attempt=$((attempt + 1))
+done
+
+# Final verification
+echo "📋 Final Flannel status check:"
+sudo -u ubuntu kubectl get pods -n kube-flannel
 
 # Remove taint from control plane node to allow scheduling of regular pods
 # This is required for single-node clusters so that the control plane can run workloads
@@ -149,21 +209,94 @@ echo "📝 To check logs: sudo -u ubuntu kubectl logs -l app=nginx"
 # Wait for cluster to be fully ready before installing Metrics Server
 echo "⏳ Waiting for cluster to be fully ready..."
 echo "📋 Checking kube-system pods..."
-sudo -u ubuntu kubectl wait --for=condition=ready pod -l k8s-app=kube-dns -n kube-system --timeout=300s
-sudo -u ubuntu kubectl wait --for=condition=ready pod -l app=flannel -n kube-flannel --timeout=300s
-echo "✅ Cluster is ready!"
 
-# Install Metrics Server
+# Function to check cluster readiness
+check_cluster_ready() {
+    # Check DNS pods
+    if ! sudo -u ubuntu kubectl wait --for=condition=ready pod -l k8s-app=kube-dns -n kube-system --timeout=60s 2>/dev/null; then
+        echo "⚠️  DNS pods not ready yet..."
+        return 1
+    fi
+    
+    # Check if Flannel pods are running (final check)
+    if ! sudo -u ubuntu kubectl get pods -n kube-flannel --no-headers 2>/dev/null | grep -q "Running"; then
+        echo "⚠️  Flannel pods not running yet..."
+        return 1
+    fi
+    
+    echo "✅ Cluster is ready!"
+    return 0
+}
+
+# Retry logic for cluster readiness
+max_attempts=5
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    echo "🔄 Attempt $attempt/$max_attempts to check cluster readiness..."
+    
+    if check_cluster_ready; then
+        break
+    fi
+    
+    if [ $attempt -eq $max_attempts ]; then
+        echo "⚠️  Cluster readiness check failed after $max_attempts attempts"
+        echo "📋 Current cluster status:"
+        sudo -u ubuntu kubectl get pods --all-namespaces
+        echo "⚠️  Continuing with Metrics Server installation anyway..."
+        break
+    fi
+    
+    echo "⏳ Waiting 60 seconds before retry..."
+    sleep 60
+    attempt=$((attempt + 1))
+done
+
+# Install Metrics Server with error handling
 echo "📊 Installing Metrics Server..."
-sudo -u ubuntu kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+if ! sudo -u ubuntu kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml; then
+    echo "❌ Failed to apply Metrics Server manifest"
+    echo "📋 Checking if Metrics Server already exists..."
+    sudo -u ubuntu kubectl get deployment metrics-server -n kube-system 2>/dev/null || echo "Metrics Server deployment not found"
+else
+    echo "✅ Metrics Server manifest applied successfully"
+fi
 
 # Patch Metrics Server to work with self-signed certificates
 echo "🔧 Patching Metrics Server for self-signed certificates..."
-sudo -u ubuntu kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+if ! sudo -u ubuntu kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'; then
+    echo "❌ Failed to patch Metrics Server"
+    echo "📋 Checking current Metrics Server args..."
+    sudo -u ubuntu kubectl get deployment metrics-server -n kube-system -o jsonpath='{.spec.template.spec.containers[0].args}' 2>/dev/null || echo "Could not get args"
+else
+    echo "✅ Metrics Server patched successfully"
+fi
 
-# Wait for Metrics Server to be ready
+# Wait for Metrics Server to be ready with retry logic
 echo "⏳ Waiting for Metrics Server to be ready..."
-sudo -u ubuntu kubectl wait --for=condition=available deployment/metrics-server -n kube-system --timeout=300s
+max_attempts=10
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    echo "🔄 Attempt $attempt/$max_attempts to check Metrics Server readiness..."
+    
+    if sudo -u ubuntu kubectl wait --for=condition=available deployment/metrics-server -n kube-system --timeout=60s 2>/dev/null; then
+        echo "✅ Metrics Server is ready!"
+        break
+    fi
+    
+    if [ $attempt -eq $max_attempts ]; then
+        echo "⚠️  Metrics Server readiness check failed after $max_attempts attempts"
+        echo "📋 Current Metrics Server status:"
+        sudo -u ubuntu kubectl get pods -n kube-system | grep metrics
+        echo "📋 Metrics Server logs:"
+        sudo -u ubuntu kubectl logs -n kube-system deployment/metrics-server --tail=20 2>/dev/null || echo "Could not get logs"
+        echo "⚠️  Metrics Server may not be fully functional, but continuing..."
+        break
+    fi
+    
+    echo "⏳ Waiting 30 seconds before retry..."
+    sleep 30
+    attempt=$((attempt + 1))
+done
 
-echo "✅ Metrics Server installation complete!"
+echo "✅ Metrics Server installation process complete!"
 echo "📈 You can now use: kubectl top nodes and kubectl top pods" 
