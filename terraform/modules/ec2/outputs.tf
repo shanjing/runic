@@ -10,7 +10,12 @@ output "public_ip" {
 
 output "kubeconfig_command" {
   description = "Command to copy kubeconfig from the instance"
-  value       = "scp -i ~/.ssh/id_rsa ubuntu@${aws_instance.this.public_ip}:/home/ubuntu/.kube/config ./kubeconfig"
+  value = <<-EOT
+    Once cluster is ready, to access it from your local terminal:
+    
+    mkdir -p ~/.kube && scp -i ~/.ssh/id_rsa ubuntu@${aws_instance.this.public_ip}:/home/ubuntu/.kube/config-remote ~/.kube/config
+    kubectl get nodes
+  EOT
 }
 
 output "ssh_command" {
@@ -33,5 +38,10 @@ output "bootstrap_monitoring_instructions" {
     ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.this.public_ip} "sudo tail -f /var/log/cloud-init-output.log"
     
     ⏱️  Expected completion time: 5-7 minutes
+    
+    Once cluster is ready, to access it from your local terminal:
+    
+    mkdir -p ~/.kube && scp -i ~/.ssh/id_rsa ubuntu@${aws_instance.this.public_ip}:/home/ubuntu/.kube/config-remote ~/.kube/config
+    kubectl get nodes
   EOT
 }
