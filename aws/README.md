@@ -62,37 +62,6 @@ export AWS_SECRET_ACCESS_KEY="[temporary-secret-key]"
 export AWS_SESSION_TOKEN="[temporary-session-token]"
 ```
 
-## 🔧 Usage with Terraform
-
-Once authenticated, you can use Terraform with the temporary credentials:
-
-```bash
-# Navigate to your Terraform directory
-cd terraform/envs/dev
-
-# Initialize and plan
-terraform init
-terraform plan
-
-# Apply changes
-terraform apply
-```
-
-## 🔧 Usage with AWS CLI
-
-After authentication, all AWS CLI commands will use the temporary credentials:
-
-```bash
-# List S3 buckets
-aws s3 ls
-
-# Check current identity
-aws sts get-caller-identity
-
-# List EC2 instances
-aws ec2 describe-instances
-```
-
 ## ⚠️ Important Notes
 
 ### Security

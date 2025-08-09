@@ -29,13 +29,23 @@ Runic/
 
 ### Prerequisites
 
-- AWS CLI configured with appropriate credentials
+- AWS CLI configured with appropriate credentials (see [AWS Authentication](./aws/README.md))
 - Terraform installed
 - kubectl installed (for Kubernetes management)
 
 ### Development Environment Setup
 
-1. **Deploy Infrastructure**:
+1. **Authenticate with AWS**:
+
+   ```bash
+   # Authenticate with MFA and assume admin role
+   source aws/assume-role.sh
+   
+   # Verify authentication
+   aws sts get-caller-identity
+   ```
+
+2. **Deploy Infrastructure**:
 
    ```bash
    cd terraform/envs/dev
@@ -44,7 +54,7 @@ Runic/
    terraform apply
    ```
 
-2. **Access Kubernetes Cluster**:
+3. **Access Kubernetes Cluster**:
 
    ```bash
    # Get the SSH command from terraform output
@@ -58,7 +68,7 @@ Runic/
    kubectl get nodes
    ```
 
-3. **Deploy Applications**:
+4. **Deploy Applications**:
 
    ```bash
    # Using Helm charts
@@ -93,15 +103,59 @@ Runic/
 - **Orchestration**: Kubernetes 1.33.0
 - **Networking**: Flannel CNI
 - **Package Management**: Helm
-- **Security**: AWS Security Groups, IAM
+- **Security**: AWS Security Groups, IAM, MFA Authentication
 
 ## �� Documentation
 
 - [About Runic](./ABOUT.md) - Project vision and creator background
 - [Infrastructure Status](./docs/infrastructure-status.md) - Detailed infrastructure overview
 - [Kubernetes Setup](./kubernetes/README.md) - Kubernetes-specific documentation
+- [AWS Authentication](./aws/README.md) - AWS CLI authentication with MFA
 
 ## 🔧 Development
+
+### AWS Authentication
+
+Before working with Terraform or AWS resources, authenticate with AWS:
+
+```bash
+# Authenticate with MFA and assume admin role
+source aws/assume-role.sh
+
+# Verify authentication
+aws sts get-caller-identity
+```
+
+### Usage with Terraform
+
+Once authenticated, you can use Terraform with the temporary credentials:
+
+```bash
+# Navigate to your Terraform directory
+cd terraform/envs/dev
+
+# Initialize and plan
+terraform init
+terraform plan
+
+# Apply changes
+terraform apply
+```
+
+### Usage with AWS CLI
+
+After authentication, all AWS CLI commands will use the temporary credentials:
+
+```bash
+# List S3 buckets
+aws s3 ls
+
+# Check current identity
+aws sts get-caller-identity
+
+# List EC2 instances
+aws ec2 describe-instances
+```
 
 ### Adding New Kubernetes Resources
 
