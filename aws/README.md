@@ -29,17 +29,19 @@ aws configure --profile shaniac
 
 ### Quick Start
 
-1. **Make the script executable**:
-   ```bash
-   chmod +x aws/assume-role.sh
-   ```
+1. **Run the authentication script**:
 
-2. **Run the authentication script**:
    ```bash
    source aws/assume-role.sh
    ```
 
-3. **Enter your MFA token** when prompted (6-digit code from your authenticator app)
+2. **Enter your MFA token** when prompted (6-digit code from your authenticator app)
+
+3. **Verify authentication**:
+
+   ```bash
+   aws sts get-caller-identity
+   ```
 
 ### What the Script Does
 
@@ -94,11 +96,13 @@ aws ec2 describe-instances
 ## ⚠️ Important Notes
 
 ### Security
+
 - **Temporary Credentials**: The script creates temporary credentials that expire after 4 hours
 - **MFA Required**: You must provide a valid MFA token each time you run the script
 - **Role Assumption**: The script assumes the `admin-role` which should have appropriate permissions
 
 ### Session Management
+
 - **Re-authentication**: You'll need to run the script again when credentials expire
 - **Multiple Sessions**: You can run the script multiple times for different sessions
 - **Environment Variables**: The script overwrites existing AWS environment variables
@@ -108,14 +112,17 @@ aws ec2 describe-instances
 #### Common Issues
 
 1. **"Invalid MFA token"**:
+
    - Ensure you're using the correct 6-digit code from your authenticator app
    - Check that your MFA device ARN is correct
 
 2. **"Access denied"**:
+
    - Verify your base profile has permission to assume the role
    - Check that the role ARN is correct
 
 3. **"jq command not found"**:
+
    - Install jq: `brew install jq` (macOS) or `sudo apt-get install jq` (Ubuntu)
 
 4. **"Profile not found"**:
@@ -137,15 +144,18 @@ aws iam list-mfa-devices --profile shaniac
 ## 📋 Configuration Details
 
 ### Role ARN
+
 - **Role**: `arn:aws:iam::403692606562:role/admin-role`
 - **Account**: `403692606562`
 - **Session Name**: `shaniacSession`
 
 ### MFA Device
+
 - **Device ARN**: `arn:aws:iam::403692606562:mfa/shaniac`
 - **Type**: Virtual MFA device (authenticator app)
 
 ### Session Duration
+
 - **Duration**: 4 hours (14400 seconds)
 - **Maximum**: 12 hours (43200 seconds) for role assumption
 
