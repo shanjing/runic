@@ -19,3 +19,5 @@ export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')
 
 echo "✅ AssumeRole complete — you're now using $AWS_ACCESS_KEY_ID"
 aws sts get-caller-identity
+
+

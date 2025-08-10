@@ -18,4 +18,34 @@ variable "public_subnet_cidr" {
 variable "availability_zone" {
   description = "Availability zone for subnets"
   type        = string
+}
+
+variable "enable_private_subnets" {
+  description = "Enable private subnets for EKS"
+  type        = bool
+  default     = false
+}
+
+variable "private_subnet_cidrs" {
+  description = "CIDR blocks for private subnets"
+  type        = list(string)
+  default     = ["10.0.10.0/24", "10.0.11.0/24"]
+}
+
+variable "availability_zones" {
+  description = "List of availability zones for multi-AZ setup"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for private subnets"
+  type        = bool
+  default     = false
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 } 
