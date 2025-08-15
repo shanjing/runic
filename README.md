@@ -40,7 +40,7 @@ Runic/
    ```bash
    # Authenticate with MFA and assume admin role
    source aws/assume-role.sh
-   
+
    # Verify authentication
    aws sts get-caller-identity
    ```
@@ -54,18 +54,15 @@ Runic/
    terraform apply
    ```
 
-3. **Access Kubernetes Cluster**:
+3. **Access EKS Cluster**:
 
    ```bash
-   # Get the SSH command from terraform output
-   terraform output ssh_command
+   # Configure kubectl for EKS
+   aws eks update-kubeconfig --region us-west-2 --name runic-dev-cluster
 
-   # Copy kubeconfig to your local machine
-   terraform output kubeconfig_command
-
-   # Use kubectl locally
-   export KUBECONFIG=./kubeconfig
+   # Verify cluster access
    kubectl get nodes
+   kubectl get pods --all-namespaces
    ```
 
 4. **Deploy Applications**:
@@ -83,27 +80,28 @@ Runic/
 
 ### Development Environment
 
-- ✅ **Infrastructure**: Single EC2 instance (t3.micro) in us-west-2
-- ✅ **Kubernetes**: Single-node cluster with containerd and Flannel CNI (v1.33.0)
-- ✅ **Security**: Restrictive security groups with necessary ports open
-- ✅ **Cost Optimized**: No NAT Gateway (~$32/month saved)
+- ✅ **Infrastructure**: EKS cluster with auto-scaling worker nodes
+- ✅ **Kubernetes**: Managed EKS cluster (v1.29) with IRSA support
+- ✅ **Security**: IAM roles, security groups, and MFA authentication
+- ✅ **Cost Optimized**: Spot instances, minimal nodes, no NAT Gateway
+- ✅ **Networking**: VPC with public and private subnets
 
 ### Planned Production
 
 - 🔄 **Multi-AZ**: High availability across availability zones
-- 🔄 **Private Subnets**: Kubernetes nodes in private subnets
 - 🔄 **Load Balancer**: ALB for external traffic
 - 🔄 **Bastion Host**: Secure SSH access to private nodes
-- 🔄 **NAT Gateway**: For private node internet access
+- 🔄 **Monitoring**: Prometheus, Grafana, and CloudWatch integration
+- 🔄 **Data Layer**: RDS, MSK, and S3 integration
 
 ## 🛠️ Technology Stack
 
-- **Infrastructure**: Terraform, AWS
+- **Infrastructure**: Terraform, AWS EKS
 - **Container Runtime**: containerd
-- **Orchestration**: Kubernetes 1.33.0
-- **Networking**: Flannel CNI
+- **Orchestration**: Kubernetes 1.29 (EKS)
+- **Networking**: AWS VPC CNI
 - **Package Management**: Helm
-- **Security**: AWS Security Groups, IAM, MFA Authentication
+- **Security**: AWS Security Groups, IAM, IRSA, MFA Authentication
 
 ## �� Documentation
 
@@ -168,11 +166,91 @@ aws ec2 describe-instances
 1. **Terraform Modules**: Place in `terraform/modules/`
 2. **Environment Configs**: Place in `terraform/envs/<environment>/`
 
+## 🔄 Optional: Legacy Kubeadm Setup
+
+For learning purposes or if you prefer a self-managed Kubernetes cluster, you can use the legacy kubeadm setup:
+
+### Prerequisites
+
+- EC2 instance with Ubuntu 22.04
+- SSH access to the instance
+
+### Setup Instructions
+
+1. **Deploy EC2 Infrastructure**:
+
+   ```bash
+   cd terraform/envs/dev
+   # Comment out EKS module in main.tf
+   terraform apply -target=module.vpc -target=module.ec2
+   ```
+
+2. **SSH to Instance and Bootstrap**:
+
+   ```bash
+   # Get SSH command
+   terraform output ssh_command
+   
+   # SSH to instance
+   ssh -i ~/.ssh/id_rsa ubuntu@<instance-ip>
+   
+   # The bootstrap script runs automatically via user_data
+   # Monitor progress:
+   sudo tail -f /var/log/cloud-init-output.log
+   ```
+
+3. **Access Cluster**:
+
+   ```bash
+   # Copy kubeconfig from instance
+   scp -i ~/.ssh/id_rsa ubuntu@<instance-ip>:/home/ubuntu/.kube/config-remote ~/.kube/config
+   
+   # Verify access
+   kubectl get nodes
+   ```
+
+### Features
+
+- **Single-node cluster** with containerd and Flannel CNI
+- **Metrics Server** for resource monitoring
+- **Test deployment** (nginx) included
+- **Cost**: ~$15/month for t3.medium instance
+
+### Limitations
+
+- **Single point of failure** (one node)
+- **Manual management** (updates, scaling)
+- **Limited security** (no IRSA, basic RBAC)
+- **No auto-scaling** capabilities
+
 ## 📊 Cost Management
 
-- **Development**: ~$8-15/month
-- **Production**: ~$200-500+/month
-- **Monitoring**: Use AWS Cost Explorer
+### Development Environment Costs
+
+| Setup | Hourly Cost | Monthly Cost (Your Usage) | Monthly Cost (24/7) |
+|-------|-------------|---------------------------|-------------------|
+| **EKS (Recommended)** | $0.17/hour | $4-8/month | $125/month |
+| **Kubeadm (Legacy)** | $0.04/hour | $1-2/month | $30/month |
+
+### Cost Optimization Features
+
+- **Spot Instances**: 60-90% savings on compute costs
+- **Minimal Nodes**: 1 worker node with auto-scaling (0-2 nodes)
+- **No NAT Gateway**: Saves $0.05/hour (~$36/month if running 24/7)
+- **EKS Control Plane**: $0.10/hour (always running)
+
+### Production Environment
+
+- **Multi-AZ**: High availability across availability zones
+- **Load Balancers**: ALB/NLB for external traffic
+- **Monitoring**: CloudWatch, Prometheus, Grafana
+- **Estimated Cost**: $200-500+/month
+
+### Cost Monitoring
+
+- Use AWS Cost Explorer to track expenses
+- Set up billing alerts for budget management
+- Monitor resource usage with CloudWatch
 
 ## 🔒 Security
 

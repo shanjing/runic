@@ -37,3 +37,34 @@ output "bootstrap_monitoring_instructions" {
   description = "Instructions for monitoring the bootstrap process"
   value       = module.ec2.bootstrap_monitoring_instructions
 }
+
+# EKS Outputs
+output "eks_cluster_id" {
+  description = "EKS cluster ID"
+  value       = var.enable_eks ? module.eks[0].cluster_id : null
+}
+
+output "eks_cluster_name" {
+  description = "EKS cluster name"
+  value       = var.enable_eks ? module.eks[0].cluster_name : null
+}
+
+output "eks_cluster_endpoint" {
+  description = "EKS cluster endpoint"
+  value       = var.enable_eks ? module.eks[0].cluster_endpoint : null
+}
+
+output "eks_kubeconfig_command" {
+  description = "Command to configure kubectl for the EKS cluster"
+  value       = var.enable_eks ? module.eks[0].kubeconfig_command : null
+}
+
+output "eks_cluster_info" {
+  description = "Complete EKS cluster information"
+  value       = var.enable_eks ? module.eks[0].cluster_info : null
+}
+
+output "eks_oidc_provider_arn" {
+  description = "EKS OIDC provider ARN for IRSA"
+  value       = var.enable_eks ? module.eks[0].cluster_oidc_provider_arn : null
+}
