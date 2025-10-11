@@ -1,0 +1,244 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nexus-cluster
+  namespace: coordination-system
+  labels:
+    app: nexus
+    component: coordination
+spec:
+  serviceName: nexus-headless
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: nexus
+      component: coordination
+  template:
+    metadata:
+      labels:
+        app: nexus
+        component: coordination
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9091"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: nexus-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Anti-affinity to spread pods across nodes
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: nexus
+                component: coordination
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - t3.large
+                - t3.xlarge
+      
+      # Init container to wait for database
+      initContainers:
+      - name: wait-for-db
+        image: postgres:15-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER}; do
+            echo "Waiting for database to be ready..."
+            sleep 2
+          done
+          echo "Database is ready!"
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_USER
+      
+      containers:
+      - name: nexus-node
+        image: runic/nexus:latest  # Replace with actual image
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: api
+          containerPort: 8080
+          protocol: TCP
+        - name: consensus
+          containerPort: 9090
+          protocol: TCP
+        - name: metrics
+          containerPort: 9091
+          protocol: TCP
+        
+        env:
+        # Pod identity
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        
+        # Database credentials from secrets
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: DB_PASSWORD
+        
+        # Additional secrets
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: JWT_SECRET
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: ENCRYPTION_KEY
+        
+        envFrom:
+        - configMapRef:
+            name: nexus-config
+        
+        volumeMounts:
+        - name: nexus-data
+          mountPath: /var/lib/nexus
+        - name: tmp
+          mountPath: /tmp
+        
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        
+        # Liveness probe - checks if the container is alive
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: api
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe - checks if the container is ready to serve traffic
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: api
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Startup probe - gives the app time to start up
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: api
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 30
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      
+      # Graceful shutdown
+      terminationGracePeriodSeconds: 60
+  
+  # Volume claim templates for persistent storage
+  volumeClaimTemplates:
+  - metadata:
+      name: nexus-data
+      labels:
+        app: nexus
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 20Gi
+

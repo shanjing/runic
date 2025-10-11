@@ -1,264 +1,396 @@
-# Runic
+# Runic Infrastructure
 
-A modern infrastructure and application platform built with Terraform, Kubernetes, and Helm.
+Infrastructure as Code repository for managing cloud resources and Kubernetes deployments.
 
-> 📖 **Learn more about Runic**: See [ABOUT.md](./ABOUT.md) for project vision and creator background.
+## Overview
 
-## 🏗️ Project Structure
+This repository contains:
+
+- **Terraform configurations** for AWS infrastructure (VPC, EKS, RDS, etc.)
+- **Kubernetes manifests** for application deployments
+- **Helm charts** for package management
+- **Scripts** for automation and deployment
+- **Docker configurations** for local development
+
+## Projects
+
+### Nexus (Coordination Service)
+
+A stateful, distributed coordination service running on Kubernetes with:
+
+- High availability (3+ replicas with consensus)
+- Persistent storage (StatefulSets with PVCs)
+- PostgreSQL database backend (RDS Multi-AZ)
+- Secure key management (AWS KMS)
+- Comprehensive monitoring (Prometheus + Grafana)
+
+**Use Cases:**
+
+- Distributed state coordination
+- Blockchain state management
+- Multi-party coordination protocols
+- High-availability transaction processing
+
+> **Note**: This project is purely for fun and experimentation—exploring how to scale Kubernetes to support low-latency stateful applications with production-grade infrastructure patterns.
+
+**Documentation:**
+
+- [Architecture](docs/nexus-architecture.md)
+- [Deployment Guide](docs/nexus-deployment-guide.md)
+- [Quick Reference](docs/nexus-quick-reference.md)
+
+**Quick Start:**
+
+```bash
+# Clone the repository
+git clone https://github.com/shanjing/runic.git
+cd runic
+
+# Option 1: Automated deployment (Terraform + Helm)
+./scripts/deploy-nexus.sh
+
+# Option 2: Manual Helm installation (requires infrastructure already deployed)
+helm install nexus ./kubernetes/helm/charts/nexus \
+  -n coordination-system \
+  --create-namespace
+
+# Cleanup
+./scripts/destroy-nexus.sh
+```
+
+### Kafka Local Development
+
+Local Kafka cluster for development and testing:
+
+- 2-broker Kafka cluster
+- Zookeeper for coordination
+- Kafka UI for management
+- Example scripts and demos
+
+**Quick Start:**
+
+```bash
+cd docker/kafka
+docker-compose up -d
+```
+
+## Directory Structure
 
 ```
 Runic/
-├── docs/                    # Documentation
-│   └── infrastructure-status.md
-├── kubernetes/              # Kubernetes resources
-│   ├── helm/               # Helm charts
-│   ├── manifests/          # Kubernetes YAML manifests
-│   ├── configs/            # Kubernetes configurations
-│   └── scripts/            # Kubernetes-related scripts
-├── terraform/              # Infrastructure as Code
-│   ├── modules/            # Reusable Terraform modules
-│   │   ├── ec2/           # EC2 instance module
-│   │   └── vpc/           # VPC and networking module
-│   └── envs/              # Environment-specific configurations
-│       └── dev/           # Development environment
-├── scripts/                # Utility scripts
-└── .vscode/               # VS Code workspace settings
+├── aws/                    # AWS utility scripts
+├── docker/                 # Docker configurations
+│   └── kafka/             # Local Kafka setup
+├── docs/                   # Documentation
+├── kubernetes/            # Kubernetes resources
+│   ├── configs/           # Configuration files
+│   ├── helm/              # Helm charts
+│   │   └── charts/
+│   │       └── nexus/     # Nexus Helm chart
+│   ├── manifests/         # Raw Kubernetes manifests
+│   │   └── nexus/         # Nexus manifests
+│   └── scripts/           # Kubernetes utility scripts
+├── scripts/               # Automation scripts
+│   ├── deploy-nexus.sh    # Deploy Nexus infrastructure
+│   └── destroy-nexus.sh   # Cleanup Nexus infrastructure
+└── terraform/             # Terraform configurations
+    ├── envs/              # Environment-specific configs
+    │   ├── dev/           # Development environment
+    │   └── nexus/         # Nexus environment
+    └── modules/           # Reusable Terraform modules
+        ├── ec2/           # EC2 instances
+        ├── eks/           # EKS cluster
+        └── vpc/           # VPC networking
 ```
 
-## 🚀 Quick Start
+## Prerequisites
 
-### Prerequisites
-
-- AWS CLI configured with appropriate credentials (see [AWS Authentication](./aws/README.md))
-- Terraform installed
-- kubectl installed (for Kubernetes management)
-
-### Development Environment Setup
-
-1. **Authenticate with AWS**:
-
-   ```bash
-   # Authenticate with MFA and assume admin role
-   source aws/assume-role.sh
-
-   # Verify authentication
-   aws sts get-caller-identity
-   ```
-
-2. **Deploy Infrastructure**:
-
-   ```bash
-   cd terraform/envs/dev
-   terraform init
-   terraform plan
-   terraform apply
-   ```
-
-3. **Access EKS Cluster**:
-
-   ```bash
-   # Configure kubectl for EKS
-   aws eks update-kubeconfig --region us-west-2 --name runic-dev-cluster
-
-   # Verify cluster access
-   kubectl get nodes
-   kubectl get pods --all-namespaces
-   ```
-
-4. **Deploy Applications**:
-
-   ```bash
-   # Using Helm charts
-   cd kubernetes/helm
-   helm install my-app ./my-app-chart
-
-   # Using Kubernetes manifests
-   kubectl apply -f kubernetes/manifests/
-   ```
-
-## 📋 Current Status
-
-### Development Environment
-
-- ✅ **Infrastructure**: EKS cluster with auto-scaling worker nodes
-- ✅ **Kubernetes**: Managed EKS cluster (v1.29) with IRSA support
-- ✅ **Security**: IAM roles, security groups, and MFA authentication
-- ✅ **Cost Optimized**: Spot instances, minimal nodes, no NAT Gateway
-- ✅ **Networking**: VPC with public and private subnets
-
-### Planned Production
-
-- 🔄 **Multi-AZ**: High availability across availability zones
-- 🔄 **Load Balancer**: ALB for external traffic
-- 🔄 **Bastion Host**: Secure SSH access to private nodes
-- 🔄 **Monitoring**: Prometheus, Grafana, and CloudWatch integration
-- 🔄 **Data Layer**: RDS, MSK, and S3 integration
-
-## 🛠️ Technology Stack
-
-- **Infrastructure**: Terraform, AWS EKS
-- **Container Runtime**: containerd
-- **Orchestration**: Kubernetes 1.29 (EKS)
-- **Networking**: AWS VPC CNI
-- **Package Management**: Helm
-- **Security**: AWS Security Groups, IAM, IRSA, MFA Authentication
-
-## �� Documentation
-
-- [About Runic](./ABOUT.md) - Project vision and creator background
-- [Infrastructure Status](./docs/infrastructure-status.md) - Detailed infrastructure overview
-- [Kubernetes Setup](./kubernetes/README.md) - Kubernetes-specific documentation
-- [AWS Authentication](./aws/README.md) - AWS CLI authentication with MFA
-
-## 🔧 Development
-
-### AWS Authentication
-
-Before working with Terraform or AWS resources, authenticate with AWS:
+### Required Tools
 
 ```bash
-# Authenticate with MFA and assume admin role
-source aws/assume-role.sh
+# macOS
+brew install awscli terraform kubectl helm jq
 
-# Verify authentication
+# Linux
+# Install via package manager or download binaries
+```
+
+### AWS Configuration
+
+```bash
+# Configure AWS credentials
+aws configure
+
+# Verify access
 aws sts get-caller-identity
 ```
 
-### Usage with Terraform
+## Getting Started
 
-Once authenticated, you can use Terraform with the temporary credentials:
+### 1. Deploy Nexus Infrastructure
 
 ```bash
-# Navigate to your Terraform directory
-cd terraform/envs/dev
+# Clone the repository
+git clone https://github.com/shanjing/runic.git
+cd runic
 
-# Initialize and plan
+# Automated deployment
+./scripts/deploy-nexus.sh
+
+# Or manual step-by-step
+cd terraform/envs/nexus
 terraform init
-terraform plan
-
-# Apply changes
 terraform apply
+
+# Configure kubectl
+aws eks update-kubeconfig --region us-west-2 --name nexus-coordination-cluster
+
+# Deploy with Helm (from repository root)
+helm install nexus ./kubernetes/helm/charts/nexus \
+  -n coordination-system \
+  --create-namespace
 ```
 
-### Usage with AWS CLI
-
-After authentication, all AWS CLI commands will use the temporary credentials:
+### 2. Verify Deployment
 
 ```bash
-# List S3 buckets
-aws s3 ls
+# Check all resources
+kubectl get all -n coordination-system
 
-# Check current identity
-aws sts get-caller-identity
+# Check pod status
+kubectl get pods -n coordination-system
 
-# List EC2 instances
-aws ec2 describe-instances
+# View logs
+kubectl logs -f statefulset/nexus-cluster -n coordination-system
+
+# Test API
+kubectl port-forward svc/nexus-api 8080:8080 -n coordination-system
+curl http://localhost:8080/health/ready
 ```
 
-### Adding New Kubernetes Resources
+### 3. Access Services
 
-1. **Helm Charts**: Place in `kubernetes/helm/`
-2. **Raw Manifests**: Place in `kubernetes/manifests/`
-3. **Configurations**: Place in `kubernetes/configs/`
+```bash
+# API endpoint (via port-forward)
+kubectl port-forward svc/nexus-api 8080:8080 -n coordination-system
 
-### Adding New Infrastructure
+# Metrics endpoint
+kubectl port-forward svc/nexus-api 9091:9091 -n coordination-system
 
-1. **Terraform Modules**: Place in `terraform/modules/`
-2. **Environment Configs**: Place in `terraform/envs/<environment>/`
+# Via Ingress (if configured)
+kubectl get ingress -n coordination-system
+```
 
-## 🔄 Optional: Legacy Kubeadm Setup
+## Infrastructure Components
 
-For learning purposes or if you prefer a self-managed Kubernetes cluster, you can use the legacy kubeadm setup:
+### Nexus Environment
 
-### Prerequisites
+**Compute:**
 
-- EC2 instance with Ubuntu 22.04
-- SSH access to the instance
+- EKS Cluster (Kubernetes 1.28)
+- Managed Node Group (3-10 nodes, t3.large/xlarge)
+- Auto-scaling enabled
 
-### Setup Instructions
+**Storage:**
 
-1. **Deploy EC2 Infrastructure**:
+- EBS volumes (gp3) for pod storage
+- RDS PostgreSQL Multi-AZ (db.t3.large)
+- S3 for backups (optional)
 
-   ```bash
-   cd terraform/envs/dev
-   # Comment out EKS module in main.tf
-   terraform apply -target=module.vpc -target=module.ec2
-   ```
+**Networking:**
 
-2. **SSH to Instance and Bootstrap**:
+- VPC with public/private subnets across 3 AZs
+- NAT Gateways for outbound traffic
+- Application Load Balancer for ingress
+- Network policies for pod isolation
 
-   ```bash
-   # Get SSH command
-   terraform output ssh_command
-   
-   # SSH to instance
-   ssh -i ~/.ssh/id_rsa ubuntu@<instance-ip>
-   
-   # The bootstrap script runs automatically via user_data
-   # Monitor progress:
-   sudo tail -f /var/log/cloud-init-output.log
-   ```
+**Security:**
 
-3. **Access Cluster**:
+- IAM Roles for Service Accounts (IRSA)
+- AWS KMS for encryption
+- AWS Secrets Manager for credentials
+- Security groups and NACLs
 
-   ```bash
-   # Copy kubeconfig from instance
-   scp -i ~/.ssh/id_rsa ubuntu@<instance-ip>:/home/ubuntu/.kube/config-remote ~/.kube/config
-   
-   # Verify access
-   kubectl get nodes
-   ```
+**Monitoring:**
 
-### Features
+- Prometheus for metrics collection
+- Grafana for visualization
+- CloudWatch for AWS service logs
+- Service monitors for pod metrics
 
-- **Single-node cluster** with containerd and Flannel CNI
-- **Metrics Server** for resource monitoring
-- **Test deployment** (nginx) included
-- **Cost**: ~$15/month for t3.medium instance
+## Common Operations
 
-### Limitations
+### Update Application
 
-- **Single point of failure** (one node)
-- **Manual management** (updates, scaling)
-- **Limited security** (no IRSA, basic RBAC)
-- **No auto-scaling** capabilities
+```bash
+# Update Helm release (from repository root)
+helm upgrade nexus ./kubernetes/helm/charts/nexus \
+  -n coordination-system \
+  --set image.tag=v1.1.0
 
-## 📊 Cost Management
+# Or update via kubectl
+kubectl set image statefulset/nexus-cluster \
+  nexus-node=ghcr.io/shanjing/nexus:v1.1.0 \
+  -n coordination-system
+```
 
-### Development Environment Costs
+### Scale StatefulSet
 
-| Setup | Hourly Cost | Monthly Cost (Your Usage) | Monthly Cost (24/7) |
-|-------|-------------|---------------------------|-------------------|
-| **EKS (Recommended)** | $0.17/hour | $4-8/month | $125/month |
-| **Kubeadm (Legacy)** | $0.04/hour | $1-2/month | $30/month |
+```bash
+# Scale up
+kubectl scale statefulset nexus-cluster --replicas=5 -n coordination-system
 
-### Cost Optimization Features
+# Scale down
+kubectl scale statefulset nexus-cluster --replicas=3 -n coordination-system
+```
 
-- **Spot Instances**: 60-90% savings on compute costs
-- **Minimal Nodes**: 1 worker node with auto-scaling (0-2 nodes)
-- **No NAT Gateway**: Saves $0.05/hour (~$36/month if running 24/7)
-- **EKS Control Plane**: $0.10/hour (always running)
+### View Logs
 
-### Production Environment
+```bash
+# All pods
+kubectl logs -f statefulset/nexus-cluster -n coordination-system
 
-- **Multi-AZ**: High availability across availability zones
-- **Load Balancers**: ALB/NLB for external traffic
-- **Monitoring**: CloudWatch, Prometheus, Grafana
-- **Estimated Cost**: $200-500+/month
+# Specific pod
+kubectl logs -f nexus-cluster-0 -n coordination-system
 
-### Cost Monitoring
+# Previous pod instance
+kubectl logs nexus-cluster-0 -n coordination-system --previous
+```
 
-- Use AWS Cost Explorer to track expenses
-- Set up billing alerts for budget management
-- Monitor resource usage with CloudWatch
+### Backup Database
 
-## 🔒 Security
+```bash
+# Get RDS endpoint
+terraform -chdir=terraform/envs/nexus output rds_endpoint
 
-- Follow AWS Well-Architected Framework
-- Implement least privilege access
-- Regular security updates
-- Network segmentation
+# Create manual snapshot
+aws rds create-db-snapshot \
+  --db-instance-identifier nexus-coordination-cluster-db \
+  --db-snapshot-identifier nexus-manual-snapshot-$(date +%Y%m%d-%H%M%S)
+```
 
----
+### Restore Database
 
-_Last Updated: June 28, 2024_
+```bash
+# List snapshots
+aws rds describe-db-snapshots \
+  --db-instance-identifier nexus-coordination-cluster-db
+
+# Restore from snapshot
+aws rds restore-db-instance-from-db-snapshot \
+  --db-instance-identifier nexus-coordination-cluster-db-restored \
+  --db-snapshot-identifier nexus-manual-snapshot-YYYYMMDD-HHMMSS
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Pods not starting:**
+
+```bash
+kubectl describe pod nexus-cluster-0 -n coordination-system
+kubectl get events -n coordination-system --sort-by='.lastTimestamp'
+```
+
+**Database connection issues:**
+
+```bash
+# Check security groups
+# Ensure EKS nodes can access RDS on port 5432
+
+# Test from pod
+kubectl exec -it nexus-cluster-0 -n coordination-system -- \
+  psql -h $DB_HOST -U $DB_USER -d $DB_NAME
+```
+
+**Terraform state locked:**
+
+```bash
+terraform force-unlock LOCK_ID
+```
+
+**Helm release issues:**
+
+```bash
+helm list -n coordination-system
+helm rollback nexus -n coordination-system
+```
+
+## Cost Management
+
+### Estimated Monthly Costs (us-west-2)
+
+- EKS Control Plane: ~$73
+- EC2 Nodes (3x t3.large): ~$190
+- RDS (db.t3.large Multi-AZ): ~$290
+- NAT Gateways (3x): ~$100
+- EBS Volumes: ~$20
+- Data Transfer: Variable
+
+**Total:** ~$670/month (baseline)
+
+### Cost Optimization
+
+**Development:**
+
+- Use smaller instance types (t3.small/medium)
+- Single-AZ RDS
+- Fewer NAT gateways (1 instead of 3)
+- Stop resources when not in use
+
+**Production:**
+
+- Use Reserved Instances or Savings Plans
+- Enable auto-scaling
+- Use Spot instances for non-critical workloads
+- Regular resource cleanup
+
+## Security
+
+### Best Practices
+
+1. **Secrets Management:** Use AWS Secrets Manager or External Secrets Operator
+2. **Network Security:** Enable network policies, use private subnets
+3. **Access Control:** Use IRSA, implement least privilege
+4. **Encryption:** Enable encryption at rest and in transit
+5. **Audit Logging:** Enable CloudWatch Logs and EKS audit logs
+6. **Image Scanning:** Scan container images for vulnerabilities
+7. **Regular Updates:** Keep Kubernetes, OS, and dependencies updated
+
+### Compliance
+
+- Enable CloudTrail for AWS API auditing
+- Use AWS Config for compliance monitoring
+- Implement pod security standards
+- Regular security assessments
+
+## CI/CD
+
+### Recommended Setup
+
+1. **GitOps:** Use ArgoCD or Flux for automated deployments
+2. **Image Registry:** Use AWS ECR with image scanning
+3. **Pipeline:** GitHub Actions / GitLab CI / Jenkins
+4. **Testing:** Automated testing before deployment
+5. **Progressive Delivery:** Canary or blue-green deployments
+
+## Contributing
+
+1. Create a feature branch
+2. Make changes
+3. Test thoroughly
+4. Submit pull request
+5. Ensure all checks pass
+
+## Support
+
+For issues and questions:
+
+- Check documentation in `docs/`
+- Review existing issues
+- Contact the infrastructure team
+
+## License
+
+Private repository - internal use only

@@ -1,0 +1,79 @@
+---
+# Headless service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexus.fullname" . }}-headless
+  namespace: {{ include "nexus.namespace" . }}
+  labels:
+    {{- include "nexus.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "nexus.selectorLabels" . | nindent 4 }}
+  ports:
+  - name: api
+    port: {{ .Values.service.api.port }}
+    targetPort: api
+    protocol: TCP
+  - name: consensus
+    port: {{ .Values.service.consensus.port }}
+    targetPort: consensus
+    protocol: TCP
+  - name: metrics
+    port: {{ .Values.service.metrics.port }}
+    targetPort: metrics
+    protocol: TCP
+
+---
+# ClusterIP service for API
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexus.fullname" . }}-api
+  namespace: {{ include "nexus.namespace" . }}
+  labels:
+    {{- include "nexus.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.podAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "nexus.selectorLabels" . | nindent 4 }}
+  ports:
+  - name: api
+    port: {{ .Values.service.api.port }}
+    targetPort: api
+    protocol: TCP
+  - name: metrics
+    port: {{ .Values.service.metrics.port }}
+    targetPort: metrics
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+# Service for consensus
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexus.fullname" . }}-consensus
+  namespace: {{ include "nexus.namespace" . }}
+  labels:
+    {{- include "nexus.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "nexus.selectorLabels" . | nindent 4 }}
+  ports:
+  - name: consensus
+    port: {{ .Values.service.consensus.port }}
+    targetPort: consensus
+    protocol: TCP
+

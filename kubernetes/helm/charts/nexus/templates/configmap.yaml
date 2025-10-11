@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nexus.fullname" . }}-config
+  namespace: {{ include "nexus.namespace" . }}
+  labels:
+    {{- include "nexus.labels" . | nindent 4 }}
+data:
+  # Application Configuration
+  APP_ENV: {{ .Values.config.app.env | quote }}
+  LOG_LEVEL: {{ .Values.config.app.logLevel | quote }}
+  LOG_FORMAT: {{ .Values.config.app.logFormat | quote }}
+  
+  # Server Configuration
+  API_PORT: {{ .Values.config.server.apiPort | quote }}
+  CONSENSUS_PORT: {{ .Values.config.server.consensusPort | quote }}
+  METRICS_PORT: {{ .Values.config.server.metricsPort | quote }}
+  
+  # Consensus Configuration
+  CONSENSUS_ALGORITHM: {{ .Values.config.consensus.algorithm | quote }}
+  CONSENSUS_HEARTBEAT_MS: {{ .Values.config.consensus.heartbeatMs | quote }}
+  CONSENSUS_ELECTION_TIMEOUT_MS: {{ .Values.config.consensus.electionTimeoutMs | quote }}
+  CONSENSUS_QUORUM_SIZE: {{ .Values.config.consensus.quorumSize | quote }}
+  
+  # Database Configuration
+  DB_MAX_CONNECTIONS: {{ .Values.config.database.maxConnections | quote }}
+  DB_MIN_CONNECTIONS: {{ .Values.config.database.minConnections | quote }}
+  DB_CONNECTION_TIMEOUT: {{ .Values.config.database.connectionTimeout | quote }}
+  DB_IDLE_TIMEOUT: {{ .Values.config.database.idleTimeout | quote }}
+  DB_MAX_LIFETIME: {{ .Values.config.database.maxLifetime | quote }}
+  
+  # Key Management
+  KEY_ROTATION_INTERVAL: {{ .Values.config.keyManagement.rotationInterval | quote }}
+  KEY_ROTATION_GRACE_PERIOD: {{ .Values.config.keyManagement.rotationGracePeriod | quote }}
+  
+  # Security Configuration
+  TLS_ENABLED: {{ .Values.config.security.tlsEnabled | quote }}
+  TLS_MIN_VERSION: {{ .Values.config.security.tlsMinVersion | quote }}
+  MTLS_ENABLED: {{ .Values.config.security.mtlsEnabled | quote }}
+  
+  # Operational Configuration
+  HEALTH_CHECK_INTERVAL: {{ .Values.config.operational.healthCheckInterval | quote }}
+  GRACEFUL_SHUTDOWN_TIMEOUT: {{ .Values.config.operational.gracefulShutdownTimeout | quote }}
+  
+  # Feature Flags
+  ENABLE_AUDIT_LOGGING: {{ .Values.config.features.auditLogging | quote }}
+  ENABLE_METRICS: {{ .Values.config.features.metrics | quote }}
+  ENABLE_TRACING: {{ .Values.config.features.tracing | quote }}
+

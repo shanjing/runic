@@ -1,0 +1,85 @@
+---
+# Headless service for StatefulSet pod discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-headless
+  namespace: coordination-system
+  labels:
+    app: nexus
+    component: coordination
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: nexus
+    component: coordination
+  ports:
+  - name: api
+    port: 8080
+    targetPort: api
+    protocol: TCP
+  - name: consensus
+    port: 9090
+    targetPort: consensus
+    protocol: TCP
+  - name: metrics
+    port: 9091
+    targetPort: metrics
+    protocol: TCP
+
+---
+# ClusterIP service for API access
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-api
+  namespace: coordination-system
+  labels:
+    app: nexus
+    component: coordination
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9091"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: nexus
+    component: coordination
+  ports:
+  - name: api
+    port: 8080
+    targetPort: api
+    protocol: TCP
+  - name: metrics
+    port: 9091
+    targetPort: metrics
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+# Service for consensus communication
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-consensus
+  namespace: coordination-system
+  labels:
+    app: nexus
+    component: coordination
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: nexus
+    component: coordination
+  ports:
+  - name: consensus
+    port: 9090
+    targetPort: consensus
+    protocol: TCP
+
