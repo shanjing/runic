@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-config
+  namespace: coordination-system
+  labels:
+    app: nexus
+data:
+  # Application Configuration
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  
+  # Server Configuration
+  API_PORT: "8080"
+  CONSENSUS_PORT: "9090"
+  METRICS_PORT: "9091"
+  
+  # Consensus Configuration
+  CONSENSUS_ALGORITHM: "raft"
+  CONSENSUS_HEARTBEAT_MS: "1000"
+  CONSENSUS_ELECTION_TIMEOUT_MS: "5000"
+  CONSENSUS_QUORUM_SIZE: "2"
+  
+  # Database Configuration
+  DB_MAX_CONNECTIONS: "50"
+  DB_MIN_CONNECTIONS: "10"
+  DB_CONNECTION_TIMEOUT: "30s"
+  DB_IDLE_TIMEOUT: "300s"
+  DB_MAX_LIFETIME: "3600s"
+  
+  # Key Management
+  KEY_ROTATION_INTERVAL: "86400"  # 24 hours
+  KEY_ROTATION_GRACE_PERIOD: "3600"  # 1 hour
+  
+  # Security Configuration
+  TLS_ENABLED: "true"
+  TLS_MIN_VERSION: "1.3"
+  MTLS_ENABLED: "true"
+  
+  # Operational Configuration
+  HEALTH_CHECK_INTERVAL: "10s"
+  GRACEFUL_SHUTDOWN_TIMEOUT: "30s"
+  
+  # Feature Flags
+  ENABLE_AUDIT_LOGGING: "true"
+  ENABLE_METRICS: "true"
+  ENABLE_TRACING: "true"
+

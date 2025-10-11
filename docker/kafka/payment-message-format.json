@@ -1,0 +1,195 @@
+{
+  "payment_message_format": {
+    "description": "Real-time P2P payment message format for Kafka",
+    "version": "1.0",
+    "fields": {
+      "message_id": {
+        "type": "string",
+        "description": "Unique identifier for the payment message",
+        "example": "pay_1234567890_abcdef",
+        "required": true
+      },
+      "transaction_id": {
+        "type": "string", 
+        "description": "Unique transaction identifier for tracking",
+        "example": "txn_20241201_001234",
+        "required": true
+      },
+      "timestamp": {
+        "type": "string",
+        "description": "ISO 8601 timestamp when payment was initiated",
+        "example": "2024-12-01T10:30:45.123Z",
+        "required": true
+      },
+      "payment_type": {
+        "type": "string",
+        "enum": ["P2P_TRANSFER", "REQUEST_PAYMENT", "PAYMENT_CONFIRMATION", "PAYMENT_REJECTION", "REFUND"],
+        "description": "Type of payment operation",
+        "required": true
+      },
+      "status": {
+        "type": "string",
+        "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED", "REFUNDED"],
+        "description": "Current status of the payment",
+        "required": true
+      },
+      "sender": {
+        "type": "object",
+        "description": "Sender account information",
+        "required": true,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Unique user identifier",
+            "example": "user_12345"
+          },
+          "account_id": {
+            "type": "string", 
+            "description": "Account identifier",
+            "example": "acc_67890"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone number (optional for notifications)",
+            "example": "+1234567890"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address (optional for notifications)",
+            "example": "sender@example.com"
+          }
+        }
+      },
+      "recipient": {
+        "type": "object",
+        "description": "Recipient account information",
+        "required": true,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Unique user identifier",
+            "example": "user_67890"
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Account identifier", 
+            "example": "acc_12345"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone number",
+            "example": "+0987654321"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address",
+            "example": "recipient@example.com"
+          }
+        }
+      },
+      "amount": {
+        "type": "object",
+        "description": "Payment amount details",
+        "required": true,
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "Payment amount",
+            "example": 100.50
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          },
+          "fees": {
+            "type": "number",
+            "description": "Transaction fees",
+            "example": 0.50
+          },
+          "total": {
+            "type": "number", 
+            "description": "Total amount including fees",
+            "example": 101.00
+          }
+        }
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Additional payment metadata",
+        "required": false,
+        "properties": {
+          "memo": {
+            "type": "string",
+            "description": "Payment memo/message",
+            "example": "Lunch payment"
+          },
+          "category": {
+            "type": "string",
+            "description": "Payment category",
+            "example": "FOOD", "TRANSPORT", "ENTERTAINMENT"
+          },
+          "tags": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Payment tags",
+            "example": ["urgent", "business"]
+          },
+          "reference": {
+            "type": "string",
+            "description": "External reference number",
+            "example": "INV-2024-001"
+          }
+        }
+      },
+      "security": {
+        "type": "object",
+        "description": "Security and verification details",
+        "required": true,
+        "properties": {
+          "signature": {
+            "type": "string",
+            "description": "Digital signature for message integrity",
+            "example": "sha256_hash_of_message"
+          },
+          "encryption_key_id": {
+            "type": "string",
+            "description": "Encryption key identifier",
+            "example": "key_20241201_001"
+          },
+          "verification_code": {
+            "type": "string",
+            "description": "2FA or verification code",
+            "example": "123456"
+          }
+        }
+      },
+      "routing": {
+        "type": "object",
+        "description": "Message routing information",
+        "required": true,
+        "properties": {
+          "partition_key": {
+            "type": "string",
+            "description": "Key for Kafka partition assignment",
+            "example": "user_12345"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "NORMAL", "HIGH", "URGENT"],
+            "description": "Message processing priority",
+            "example": "NORMAL"
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "description": "Time to live in seconds",
+            "example": 300
+          }
+        }
+      }
+    }
+  }
+}
+
+
+

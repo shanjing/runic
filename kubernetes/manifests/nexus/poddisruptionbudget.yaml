@@ -1,0 +1,16 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nexus-pdb
+  namespace: coordination-system
+  labels:
+    app: nexus
+    component: coordination
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: nexus
+      component: coordination
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+

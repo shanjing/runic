@@ -1,0 +1,135 @@
+---
+# Network policy to restrict ingress to SCS pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nexus-ingress
+  namespace: coordination-system
+  labels:
+    app: nexus
+spec:
+  podSelector:
+    matchLabels:
+      app: nexus
+      component: coordination
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow ingress from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  
+  # Allow ingress from istio ingress gateway
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    ports:
+    - protocol: TCP
+      port: 8080
+  
+  # Allow consensus traffic within the same namespace (pod-to-pod)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: nexus
+          component: coordination
+    ports:
+    - protocol: TCP
+      port: 9090
+  
+  # Allow prometheus scraping
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9091
+
+---
+# Network policy to restrict egress from SCS pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nexus-egress
+  namespace: coordination-system
+  labels:
+    app: nexus
+spec:
+  podSelector:
+    matchLabels:
+      app: nexus
+      component: coordination
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS resolution
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  
+  # Allow consensus traffic to other SCS pods
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nexus
+          component: coordination
+    ports:
+    - protocol: TCP
+      port: 9090
+  
+  # Allow access to RDS (PostgreSQL)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+  
+  # Allow access to AWS services (KMS, Secrets Manager, etc.)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  
+  # Allow HTTPS for external API calls (if needed)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# Default deny all ingress for the namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: coordination-system
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Default deny all egress for the namespace (optional, uncomment if needed)
+# apiVersion: networking.k8s.io/v1
+# kind: NetworkPolicy
+# metadata:
+#   name: default-deny-egress
+#   namespace: coordination-system
+# spec:
+#   podSelector: {}
+#   policyTypes:
+#   - Egress
+
