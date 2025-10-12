@@ -1,6 +1,6 @@
 # Runic
 
-A modern infrastructure and application platform built with Terraform, Kubernetes, and Helm.
+A modern infrastructure and application platform built with Terraform, Kubernetes, and Helm. Nexus is in an active development stage, with gradual improvements underway.
 
 > 📖 **Learn more about Runic**: See [ABOUT.md](./ABOUT.md) for project vision and creator background.
 

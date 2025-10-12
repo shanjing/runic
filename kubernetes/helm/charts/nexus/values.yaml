@@ -1,0 +1,349 @@
+# Default values for nexus
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  environment: production
+
+# Image configuration
+image:
+  repository: runic/nexus
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Replica count for StatefulSet
+replicaCount: 3
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations:
+    # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/nexus-sa-role
+  name: "nexus-service-account"
+
+# Service account token automount (disable by default to reduce API surface)
+automountServiceAccountToken: false
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9091"
+  prometheus.io/path: "/metrics"
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+    - ALL
+
+# Service configuration - a headless service exposes consensus traffic (port 9090) and metrics (port 9091)
+service:
+  type: ClusterIP
+  api:
+    port: 8080
+    targetPort: 8080
+  consensus:
+    port: 9090
+    targetPort: 9090
+  metrics:
+    port: 9091
+    targetPort: 9091
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /health/ready
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:region:account:certificate/xxxxx
+  hosts:
+    - host: nexus-api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: nexus-tls
+  #    hosts:
+  #      - nexus-api.example.com
+
+# Internal ingress for intra-VPC access
+internalIngress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+  hosts:
+    - host: nexus-api-internal.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Autoscaling (HPA) - disabled by default for StatefulSet
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity and anti-affinity
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: nexus
+        topologyKey: kubernetes.io/hostname
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClassName: gp3
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+  annotations: {}
+
+# Application configuration
+config:
+  # Application settings
+  app:
+    env: production
+    logLevel: info
+    logFormat: json
+  
+  # Server ports
+  server:
+    apiPort: 8080
+    consensusPort: 9090
+    metricsPort: 9091
+  
+  # Consensus settings
+  consensus:
+    algorithm: raft
+    heartbeatMs: 1000
+    electionTimeoutMs: 5000
+    quorumSize: 2
+  
+  # Database settings
+  database:
+    maxConnections: 50
+    minConnections: 10
+    connectionTimeout: 30s
+    idleTimeout: 300s
+    maxLifetime: 3600s
+  
+  # Key management
+  keyManagement:
+    rotationInterval: 86400  # 24 hours
+    rotationGracePeriod: 3600  # 1 hour
+  
+  # Security
+  security:
+    tlsEnabled: true
+    tlsMinVersion: "1.3"
+    mtlsEnabled: true
+  
+  # Operational
+  operational:
+    healthCheckInterval: 10s
+    gracefulShutdownTimeout: 30s
+  
+  # Feature flags
+  features:
+    auditLogging: true
+    metrics: true
+    tracing: true
+
+# Secrets configuration
+secrets:
+  # Database connection
+  database:
+    host: ""
+    port: "5432"
+    name: "nexusdb"
+    user: "nexusadmin"
+    password: ""
+  
+  # TLS certificates
+  tls:
+    cert: ""
+    key: ""
+    ca: ""
+  
+  # HSM configuration
+  hsm:
+    endpoint: ""
+    apiKey: ""
+  
+  # Application secrets
+  app:
+    jwtSecret: ""
+    encryptionKey: ""
+
+# External secrets (using External Secrets Operator)
+externalSecrets:
+  enabled: false
+  secretStore:
+    name: aws-secrets-manager
+    kind: SecretStore
+  refreshInterval: 1h
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: nexus-rds-credentials
+        property: password
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Network policies
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+
+# Service monitor for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    prometheus: kube-prometheus
+
+# Probes configuration
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: api
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: api
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health/startup
+    port: api
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 30
+
+# Init containers
+initContainers:
+  waitForDb:
+    enabled: true
+    image: postgres:15-alpine
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+# Additional volumes
+extraVolumes: []
+
+# Additional volume mounts
+extraVolumeMounts: []
+
+# Lifecycle hooks
+lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "sleep 15"]
+
+# Termination grace period
+terminationGracePeriodSeconds: 60
+
+# Priority class
+priorityClassName: ""
+
+# Runtime class
+runtimeClassName: ""
+
+# DNS config
+dnsConfig: {}
+
+# DNS policy
+dnsPolicy: ClusterFirst
+
+# Host aliases
+hostAliases: []
+
+# Update strategy
+updateStrategy:
+  type: RollingUpdate
+
+# Pod management policy
+podManagementPolicy: OrderedReady

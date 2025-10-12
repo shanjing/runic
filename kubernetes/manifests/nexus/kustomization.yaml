@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: coordination-system
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - secret.yaml
+  - statefulset.yaml
+  - service.yaml
+  - poddisruptionbudget.yaml
+  - networkpolicy.yaml
+  - servicemonitor.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/name: nexus
+  app.kubernetes.io/part-of: coordination-system
+
+images:
+  - name: runic/nexus
+    newTag: latest
+
+configMapGenerator:
+  - name: nexus-config
+    behavior: merge
+    literals:
+      - VERSION=1.0.0
+      - BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+

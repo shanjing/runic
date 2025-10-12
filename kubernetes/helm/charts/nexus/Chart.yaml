@@ -1,0 +1,22 @@
+apiVersion: v2
+name: nexus
+description: A Helm chart for Nexus - Stateful Coordination Service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - nexus
+  - coordination
+  - stateful
+  - consensus
+  - blockchain
+home: https://github.com/shanjing/runic
+sources:
+  - https://github.com/shanjing/runic
+maintainers:
+  - name: Shanjing
+    email: shanjing@users.noreply.github.com
+icon: https://raw.githubusercontent.com/shanjing/runic/main/assets/icon.png
+annotations:
+  category: Infrastructure
+

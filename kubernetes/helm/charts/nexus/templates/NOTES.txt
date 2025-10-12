@@ -1,0 +1,62 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
+  $ helm get all {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+The Nexus (Coordination Service) has been deployed with the following configuration:
+
+- Namespace: {{ include "nexus.namespace" . }}
+- Replicas: {{ .Values.replicaCount }}
+- Service Account: {{ include "nexus.serviceAccountName" . }}
+
+{{- if .Values.ingress.enabled }}
+
+Ingress is enabled. Your application will be available at:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+To check the status of the StatefulSet:
+
+  $ kubectl get statefulset {{ include "nexus.fullname" . }} -n {{ include "nexus.namespace" . }}
+
+To check the status of the pods:
+
+  $ kubectl get pods -n {{ include "nexus.namespace" . }} -l app.kubernetes.io/name={{ include "nexus.name" . }}
+
+To view the logs:
+
+  $ kubectl logs -f statefulset/{{ include "nexus.fullname" . }} -n {{ include "nexus.namespace" . }}
+
+To port-forward the API service locally:
+
+  $ kubectl port-forward svc/{{ include "nexus.fullname" . }}-api {{ .Values.service.api.port }}:{{ .Values.service.api.port }} -n {{ include "nexus.namespace" . }}
+
+Then access the API at: http://localhost:{{ .Values.service.api.port }}
+
+To check the health of the service:
+
+  $ curl http://localhost:{{ .Values.service.api.port }}/health/ready
+
+{{- if .Values.serviceMonitor.enabled }}
+
+Prometheus ServiceMonitor is enabled. Metrics are available at:
+  http://{{ include "nexus.fullname" . }}-api:{{ .Values.service.metrics.port }}/metrics
+{{- end }}
+
+{{- if .Values.podDisruptionBudget.enabled }}
+
+PodDisruptionBudget is configured with minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+This ensures high availability during node maintenance.
+{{- end }}
+
+For more information, visit:
+  - Architecture: https://github.com/shanjing/runic/blob/main/docs/architecture.md
+  - Documentation: https://github.com/shanjing/runic
+
+Happy coordinating! 🚀
