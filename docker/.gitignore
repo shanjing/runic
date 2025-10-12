@@ -1,0 +1,15 @@
+# Docker Compose temporary files
+*.env
+.env
+.env.local
+
+# Docker volumes (if mounted locally)
+volumes/
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
