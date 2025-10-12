@@ -9,9 +9,9 @@ To learn more about the release, try:
 
 The Nexus (Coordination Service) has been deployed with the following configuration:
 
-- Namespace: {{ include "scs.namespace" . }}
+- Namespace: {{ include "nexus.namespace" . }}
 - Replicas: {{ .Values.replicaCount }}
-- Service Account: {{ include "scs.serviceAccountName" . }}
+- Service Account: {{ include "nexus.serviceAccountName" . }}
 
 {{- if .Values.ingress.enabled }}
 
@@ -23,19 +23,19 @@ Ingress is enabled. Your application will be available at:
 
 To check the status of the StatefulSet:
 
-  $ kubectl get statefulset {{ include "scs.fullname" . }} -n {{ include "scs.namespace" . }}
+  $ kubectl get statefulset {{ include "nexus.fullname" . }} -n {{ include "nexus.namespace" . }}
 
 To check the status of the pods:
 
-  $ kubectl get pods -n {{ include "scs.namespace" . }} -l app.kubernetes.io/name={{ include "scs.name" . }}
+  $ kubectl get pods -n {{ include "nexus.namespace" . }} -l app.kubernetes.io/name={{ include "nexus.name" . }}
 
 To view the logs:
 
-  $ kubectl logs -f statefulset/{{ include "scs.fullname" . }} -n {{ include "scs.namespace" . }}
+  $ kubectl logs -f statefulset/{{ include "nexus.fullname" . }} -n {{ include "nexus.namespace" . }}
 
 To port-forward the API service locally:
 
-  $ kubectl port-forward svc/{{ include "scs.fullname" . }}-api {{ .Values.service.api.port }}:{{ .Values.service.api.port }} -n {{ include "scs.namespace" . }}
+  $ kubectl port-forward svc/{{ include "nexus.fullname" . }}-api {{ .Values.service.api.port }}:{{ .Values.service.api.port }} -n {{ include "nexus.namespace" . }}
 
 Then access the API at: http://localhost:{{ .Values.service.api.port }}
 
@@ -46,7 +46,7 @@ To check the health of the service:
 {{- if .Values.serviceMonitor.enabled }}
 
 Prometheus ServiceMonitor is enabled. Metrics are available at:
-  http://{{ include "scs.fullname" . }}-api:{{ .Values.service.metrics.port }}/metrics
+  http://{{ include "nexus.fullname" . }}-api:{{ .Values.service.metrics.port }}/metrics
 {{- end }}
 
 {{- if .Values.podDisruptionBudget.enabled }}
@@ -56,8 +56,7 @@ This ensures high availability during node maintenance.
 {{- end }}
 
 For more information, visit:
-  - Architecture: https://github.com/your-org/scs/blob/main/docs/scs-architecture.md
-  - Documentation: https://github.com/your-org/scs
+  - Architecture: https://github.com/shanjing/runic/blob/main/docs/architecture.md
+  - Documentation: https://github.com/shanjing/runic
 
 Happy coordinating! 🚀
-

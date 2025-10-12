@@ -1,17 +1,17 @@
 # Nexus Helm Chart
 
-A Helm chart for deploying **Nexus** - a production-grade stateful coordination service for blockchain and distributed systems.
+A Helm chart for deploying **Nexus** - a prototype stateful coordination service for blockchain and distributed systems. Nexus remains in an active development stage with gradual improvements underway.
 
 ## About Nexus
 
-> **Note**: This project is purely for fun and experimentation—exploring how to scale Kubernetes to support low-latency stateful applications with production-grade infrastructure patterns.
+> **Note**: This project is purely for fun and experimentation—exploring how to scale Kubernetes to support low-latency stateful applications with production-inspired infrastructure patterns.
 
 Nexus is a cryptographic coordination layer that manages off-chain state transitions in distributed blockchain systems. It provides:
 
 - **State Coordination**: Manages off-chain ledger of states with secure key rotations
 - **High Availability**: 3-replica StatefulSet with Raft/Tendermint consensus for fault tolerance
 - **Persistent Storage**: Each replica maintains its own state with automatic failover
-- **Security**: Integrated with AWS KMS, IRSA, network policies, and pod security contexts
+- **Security**: Integrated with AWS KMS, IRSA, network policies, and pod security contexts (see [security notes](./SECURITY.md))
 - **Monitoring**: Built-in Prometheus metrics and health checks
 - **Scalability**: Auto-scaling support with configurable resource limits
 

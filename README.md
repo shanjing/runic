@@ -1,6 +1,7 @@
 # Runic Infrastructure
 
-Infrastructure as Code repository for managing cloud resources and Kubernetes deployments.
+A modern infrastructure and application platform built with Terraform, Kubernetes, and Helm. 
+Nexus is in an active development stage, with gradual improvements underway.
 
 ## Overview
 

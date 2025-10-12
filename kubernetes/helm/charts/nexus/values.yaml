@@ -26,6 +26,9 @@ serviceAccount:
     # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/nexus-sa-role
   name: "nexus-service-account"
 
+# Service account token automount (disable by default to reduce API surface)
+automountServiceAccountToken: false
+
 # Pod annotations
 podAnnotations:
   prometheus.io/scrape: "true"
@@ -50,7 +53,7 @@ securityContext:
     drop:
     - ALL
 
-# Service configuration
+# Service configuration - a headless service exposes consensus traffic (port 9090) and metrics (port 9091)
 service:
   type: ClusterIP
   api:
@@ -244,7 +247,7 @@ networkPolicy:
     - from:
       - namespaceSelector:
           matchLabels:
-            name: ingress-nginx
+            kubernetes.io/metadata.name: ingress-nginx
       ports:
         - protocol: TCP
           port: 8080
@@ -252,7 +255,7 @@ networkPolicy:
     - to:
       - namespaceSelector:
           matchLabels:
-            name: kube-system
+            kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: UDP
           port: 53
@@ -301,6 +304,12 @@ initContainers:
   waitForDb:
     enabled: true
     image: postgres:15-alpine
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
 
 # Additional volumes
 extraVolumes: []
@@ -338,4 +347,3 @@ updateStrategy:
 
 # Pod management policy
 podManagementPolicy: OrderedReady
-
