@@ -1,1 +1,1 @@
-- `nexus`: Helm chart for deploying the Nexus, a low-latency and secure blockchain coordination service.
+- `nexus`: Helm chart for deploying the Nexus, a low-latency and secure blockchain coordination service. Explore the [architecture overview](https://github.com/shanjing/runic/blob/main/docs/nexus-architecture.md) or browse the [Helm chart sources](https://github.com/shanjing/runic/tree/main/kubernetes/helm/charts/nexus).
