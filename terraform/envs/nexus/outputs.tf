@@ -10,7 +10,7 @@ output "private_subnet_ids" {
 
 output "public_subnet_ids" {
   description = "Public subnet IDs"
-  value       = module.vpc.public_subnet_ids
+  value       = [module.vpc.public_subnet_id]
 }
 
 output "eks_cluster_name" {
@@ -26,7 +26,7 @@ output "eks_cluster_endpoint" {
 
 output "eks_cluster_certificate_authority" {
   description = "EKS cluster certificate authority"
-  value       = module.eks.cluster_certificate_authority
+  value       = module.eks.cluster_certificate_authority_data
   sensitive   = true
 }
 
@@ -37,44 +37,44 @@ output "eks_cluster_security_group_id" {
 
 output "eks_node_security_group_id" {
   description = "EKS node security group ID"
-  value       = module.eks.node_security_group_id
+  value       = module.eks.nodes_security_group_id
 }
 
 output "eks_oidc_provider_arn" {
   description = "EKS OIDC provider ARN"
-  value       = module.eks.oidc_provider_arn
+  value       = module.eks.cluster_oidc_provider_arn
 }
 
 output "kms_key_id" {
   description = "KMS key ID for Nexus encryption"
-  value       = var.enable_kms ? aws_kms_key.scs[0].id : null
+  value       = var.enable_kms ? aws_kms_key.nexus[0].id : null
 }
 
 output "kms_key_arn" {
   description = "KMS key ARN for Nexus encryption"
-  value       = var.enable_kms ? aws_kms_key.scs[0].arn : null
+  value       = var.enable_kms ? aws_kms_key.nexus[0].arn : null
 }
 
 output "rds_endpoint" {
   description = "RDS instance endpoint"
-  value       = var.enable_rds ? aws_db_instance.scs[0].endpoint : null
+  value       = var.enable_rds ? aws_db_instance.nexus[0].endpoint : null
   sensitive   = true
 }
 
 output "rds_address" {
   description = "RDS instance address"
-  value       = var.enable_rds ? aws_db_instance.scs[0].address : null
+  value       = var.enable_rds ? aws_db_instance.nexus[0].address : null
   sensitive   = true
 }
 
 output "rds_port" {
   description = "RDS instance port"
-  value       = var.enable_rds ? aws_db_instance.scs[0].port : null
+  value       = var.enable_rds ? aws_db_instance.nexus[0].port : null
 }
 
 output "rds_database_name" {
   description = "RDS database name"
-  value       = var.enable_rds ? aws_db_instance.scs[0].db_name : null
+  value       = var.enable_rds ? aws_db_instance.nexus[0].db_name : null
 }
 
 output "rds_credentials_secret_arn" {
@@ -97,4 +97,3 @@ output "configure_kubectl" {
   description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${var.cluster_name}"
 }
-
