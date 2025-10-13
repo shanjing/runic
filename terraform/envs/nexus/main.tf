@@ -2,11 +2,14 @@
 module "vpc" {
   source = "../../modules/vpc"
 
-  environment        = var.environment
-  vpc_cidr           = var.vpc_cidr
-  availability_zones = var.availability_zones
-  private_subnets    = var.private_subnets
-  public_subnets     = var.public_subnets
+  name                   = var.cluster_name
+  vpc_cidr               = var.vpc_cidr
+  public_subnet_cidr     = element(var.public_subnets, 0)
+  availability_zone      = element(var.availability_zones, 0)
+  enable_private_subnets = length(var.private_subnets) > 0
+  private_subnet_cidrs   = var.private_subnets
+  availability_zones     = var.availability_zones
+  enable_nat_gateway     = true
 
   tags = merge(
     var.tags,
@@ -21,19 +24,22 @@ module "eks" {
   source = "../../modules/eks"
 
   cluster_name       = var.cluster_name
-  cluster_version    = var.cluster_version
+  kubernetes_version = var.cluster_version
   vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
+  subnet_ids         = module.vpc.private_subnet_ids
 
-  node_instance_types = var.eks_node_instance_types
-  node_desired_size   = var.eks_node_desired_size
-  node_min_size       = var.eks_node_min_size
-  node_max_size       = var.eks_node_max_size
-  node_disk_size      = var.eks_node_disk_size
-
-  enable_irsa = var.enable_irsa
+  instance_types = var.eks_node_instance_types
+  desired_size   = var.eks_node_desired_size
+  min_size       = var.eks_node_min_size
+  max_size       = var.eks_node_max_size
 
   tags = var.tags
+}
+
+locals {
+  eks_oidc_provider        = replace(module.eks.cluster_oidc_issuer_url, "https://", "")
+  eks_oidc_provider_arn    = module.eks.cluster_oidc_provider_arn
+  eks_nodes_security_group = module.eks.nodes_security_group_id
 }
 
 # KMS Key for encryption
@@ -56,7 +62,7 @@ resource "aws_kms_alias" "nexus" {
   count = var.enable_kms ? 1 : 0
 
   name          = "alias/${var.cluster_name}-key"
-  target_key_id = aws_kms_key.scs[0].key_id
+  target_key_id = aws_kms_key.nexus[0].key_id
 }
 
 # RDS PostgreSQL Instance
@@ -86,7 +92,7 @@ resource "aws_security_group" "rds" {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [module.eks.node_security_group_id]
+    security_groups = [local.eks_nodes_security_group]
   }
 
   egress {
@@ -123,13 +129,13 @@ resource "aws_db_instance" "nexus" {
   allocated_storage = var.rds_allocated_storage
   storage_type      = "gp3"
   storage_encrypted = true
-  kms_key_id        = var.enable_kms ? aws_kms_key.scs[0].arn : null
+  kms_key_id        = var.enable_kms ? aws_kms_key.nexus[0].arn : null
 
   db_name  = "nexusdb"
   username = "nexusadmin"
   password = random_password.rds_password[0].result
 
-  db_subnet_group_name   = aws_db_subnet_group.scs[0].name
+  db_subnet_group_name   = aws_db_subnet_group.nexus[0].name
   vpc_security_group_ids = [aws_security_group.rds[0].id]
 
   multi_az                = var.rds_multi_az
@@ -158,7 +164,7 @@ resource "aws_secretsmanager_secret" "rds_credentials" {
 
   name_prefix = "${var.cluster_name}-rds-credentials-"
   description = "RDS credentials for Nexus database"
-  kms_key_id  = var.enable_kms ? aws_kms_key.scs[0].id : null
+  kms_key_id  = var.enable_kms ? aws_kms_key.nexus[0].id : null
 
   tags = var.tags
 }
@@ -168,12 +174,12 @@ resource "aws_secretsmanager_secret_version" "rds_credentials" {
 
   secret_id = aws_secretsmanager_secret.rds_credentials[0].id
   secret_string = jsonencode({
-    username = aws_db_instance.scs[0].username
+    username = aws_db_instance.nexus[0].username
     password = random_password.rds_password[0].result
     engine   = "postgres"
-    host     = aws_db_instance.scs[0].address
-    port     = aws_db_instance.scs[0].port
-    dbname   = aws_db_instance.scs[0].db_name
+    host     = aws_db_instance.nexus[0].address
+    port     = aws_db_instance.nexus[0].port
+    dbname   = aws_db_instance.nexus[0].db_name
   })
 }
 
@@ -189,13 +195,13 @@ resource "aws_iam_role" "nexus_service_account" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = module.eks.oidc_provider_arn
+          Federated = local.eks_oidc_provider_arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
-            "${module.eks.oidc_provider}:sub" = "system:serviceaccount:coordination-system:nexus-service-account"
-            "${module.eks.oidc_provider}:aud" = "sts.amazonaws.com"
+            "${local.eks_oidc_provider}:sub" = "system:serviceaccount:coordination-system:nexus-service-account"
+            "${local.eks_oidc_provider}:aud" = "sts.amazonaws.com"
           }
         }
       }
@@ -223,7 +229,7 @@ resource "aws_iam_role_policy" "nexus_service_account" {
           "kms:GenerateDataKey",
           "kms:DescribeKey"
         ]
-        Resource = var.enable_kms ? [aws_kms_key.scs[0].arn] : []
+        Resource = var.enable_kms ? [aws_kms_key.nexus[0].arn] : []
       },
       {
         Effect = "Allow"
@@ -264,4 +270,3 @@ resource "kubernetes_service_account" "nexus" {
 
   depends_on = [module.eks]
 }
-
