@@ -24,7 +24,7 @@ variable "aws_region" {
 variable "billing_email" {
   description = "Email address to receive billing alerts"
   type        = string
-  default     = "realshanjing@gmail.com"
+  default     = "mr.shanjing@gmail.com"
 }
 
 variable "daily_budget_limit" {
