@@ -27,10 +27,10 @@ variable "billing_email" {
   default     = "realshanjing@gmail.com"
 }
 
-variable "monthly_budget_limit" {
-  description = "Monthly spend limit in USD that should trigger alerts"
+variable "daily_budget_limit" {
+  description = "Daily spend limit in USD that should trigger alerts"
   type        = number
-  default     = 30
+  default     = 20
 }
 
 provider "aws" {
@@ -72,12 +72,12 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.billing_email
 }
 
-resource "aws_budgets_budget" "monthly" {
-  name         = "trevoux-monthly-billing"
+resource "aws_budgets_budget" "daily" {
+  name         = "trevoux-daily-billing"
   budget_type  = "COST"
-  limit_amount = tostring(var.monthly_budget_limit)
+  limit_amount = tostring(var.daily_budget_limit)
   limit_unit   = "USD"
-  time_unit    = "MONTHLY"
+  time_unit    = "DAILY"
 
   cost_types {
     include_tax          = true
