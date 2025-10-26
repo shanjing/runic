@@ -1,19 +1,19 @@
 name: Deploy Prometheus to EKS
 
 on:
-  workflow_dispatch:    # allow manual trigger
+  workflow_dispatch:        # allow manual trigger
   push:
-    branches: [ trevoux ]  # or 'dev' if you prefer staging deployment
+    branches: [ "trevoux" ]  # only trigger on trevoux branch
     paths:
-      - "kubenetes/helm/**"
-      - ".github/workflows/deploy-prometheus.yml"
+      - "kubernetes/helm/**"
+      - ".github/workflows/deploy-prometheus.yaml"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write   # needed for AWS OIDC auth
+      id-token: write        # needed for AWS OIDC auth
       contents: read
 
     steps:
