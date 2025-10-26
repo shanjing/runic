@@ -22,12 +22,7 @@ prometheus:
         cpu: 500m
         memory: 2Gi
     storageSpec:
-      volumeClaimTemplate:
-        spec:
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 10Gi
+      volumeClaimTemplate: null
 
 alertmanager:
   alertmanagerSpec:
