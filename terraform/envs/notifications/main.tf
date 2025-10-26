@@ -21,9 +21,10 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "billing_phone_number" {
-  description = "E.164 formatted phone number (e.g. +15558675309) to receive billing alerts"
+variable "billing_email" {
+  description = "Email address to receive billing alerts"
   type        = string
+  default     = "realshanjing@gmail.com"
 }
 
 variable "monthly_budget_limit" {
@@ -65,10 +66,10 @@ resource "aws_sns_topic_policy" "allow_budgets" {
   })
 }
 
-resource "aws_sns_topic_subscription" "sms" {
+resource "aws_sns_topic_subscription" "email" {
   topic_arn = aws_sns_topic.billing_alerts.arn
-  protocol  = "sms"
-  endpoint  = var.billing_phone_number
+  protocol  = "email"
+  endpoint  = var.billing_email
 }
 
 resource "aws_budgets_budget" "monthly" {
