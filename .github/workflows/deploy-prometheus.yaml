@@ -3,7 +3,7 @@ name: Deploy Prometheus to EKS
 on:
   workflow_dispatch:        # allow manual trigger
   push:
-    branches: [ "trevoux" ]  # only trigger on trevoux branch
+    branches: [ "main" ]
     paths:
       - "kubernetes/helm/**"
       - ".github/workflows/deploy-prometheus.yaml"
