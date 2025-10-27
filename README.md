@@ -59,26 +59,26 @@ helm install nexus ./kubernetes/helm/charts/nexus \
 ./scripts/destroy-nexus.sh
 ```
 
-### Kafka Local Development
+### Trevoux (AI Travel Guide)
 
-Local Kafka cluster for development and testing:
+Trevoux is a lightweight AI/LLM-based French travel companion that surfaces curated itineraries, café finds, and cultural notes directly from Kubernetes workloads. It serves as a sandbox for experimenting with prompt-tuned inference services and low-latency API delivery on EKS.
+It reuses the platform primitives in this repo to prototype inference backends alongside traditional microservices.
 
-- 2-broker Kafka cluster
-- Zookeeper for coordination
-- Kafka UI for management
-- Example scripts and demos
+## GitHub Actions
 
-**Quick Start:**
+- `.github/workflows/eks-helm-deploy.yml` packages the Helm charts and deploys them to EKS on each verified push.
+- The workflow runs `helm lint`, renders manifests, and performs a `helm upgrade --install` as part of CI/CD.
 
-```bash
-cd docker/kafka
-docker-compose up -d
-```
+## Observability
+
+- `kubernetes/manifests/stratus/simple-app-podmonitor.yaml` registers the Stratus sample service with Prometheus via PodMonitor so metrics flow into the shared stack without ClusterRoles or ServiceMonitors.
 
 ## Directory Structure
 
 ```
 Runic/
+├── .github/                # GitHub workflows
+│   └── workflows/          # CI/CD (EKS Helm deploy pipeline)
 ├── aws/                    # AWS utility scripts
 ├── docker/                 # Docker configurations
 │   └── kafka/             # Local Kafka setup
@@ -89,7 +89,8 @@ Runic/
 │   │   └── charts/
 │   │       └── nexus/     # Nexus Helm chart
 │   ├── manifests/         # Raw Kubernetes manifests
-│   │   └── nexus/         # Nexus manifests
+│   │   ├── nexus/         # Nexus manifests
+│   │   └── stratus/       # Stratus lab (Prometheus PodMonitor)
 │   └── scripts/           # Kubernetes utility scripts
 ├── scripts/               # Automation scripts
 │   ├── deploy-nexus.sh    # Deploy Nexus infrastructure
@@ -97,10 +98,13 @@ Runic/
 └── terraform/             # Terraform configurations
     ├── envs/              # Environment-specific configs
     │   ├── dev/           # Development environment
-    │   └── nexus/         # Nexus environment
+    │   ├── nexus/         # Nexus environment
+    │   ├── trevoux/       # Trevoux AI-based French traveling guide infra
+    │   └── notifications/ # Billing alert SNS budget
     └── modules/           # Reusable Terraform modules
         ├── ec2/           # EC2 instances
         ├── eks/           # EKS cluster
+        ├── iam/           # roles for CI/CD etc
         └── vpc/           # VPC networking
 ```
 
@@ -146,7 +150,7 @@ terraform apply
 # Configure kubectl
 aws eks update-kubeconfig --region us-west-2 --name nexus-coordination-cluster
 
-# Deploy with Helm (from repository root)
+# Deploy with Helm (can also deploy from CI/CD)
 helm install nexus ./kubernetes/helm/charts/nexus \
   -n coordination-system \
   --create-namespace
@@ -258,31 +262,6 @@ kubectl logs -f nexus-cluster-0 -n coordination-system
 kubectl logs nexus-cluster-0 -n coordination-system --previous
 ```
 
-### Backup Database
-
-```bash
-# Get RDS endpoint
-terraform -chdir=terraform/envs/nexus output rds_endpoint
-
-# Create manual snapshot
-aws rds create-db-snapshot \
-  --db-instance-identifier nexus-coordination-cluster-db \
-  --db-snapshot-identifier nexus-manual-snapshot-$(date +%Y%m%d-%H%M%S)
-```
-
-### Restore Database
-
-```bash
-# List snapshots
-aws rds describe-db-snapshots \
-  --db-instance-identifier nexus-coordination-cluster-db
-
-# Restore from snapshot
-aws rds restore-db-instance-from-db-snapshot \
-  --db-instance-identifier nexus-coordination-cluster-db-restored \
-  --db-snapshot-identifier nexus-manual-snapshot-YYYYMMDD-HHMMSS
-```
-
 ## Troubleshooting
 
 ### Common Issues
@@ -358,40 +337,3 @@ helm rollback nexus -n coordination-system
 5. **Audit Logging:** Enable CloudWatch Logs and EKS audit logs
 6. **Image Scanning:** Scan container images for vulnerabilities
 7. **Regular Updates:** Keep Kubernetes, OS, and dependencies updated
-
-### Compliance
-
-- Enable CloudTrail for AWS API auditing
-- Use AWS Config for compliance monitoring
-- Implement pod security standards
-- Regular security assessments
-
-## CI/CD
-
-### Recommended Setup
-
-1. **GitOps:** Use ArgoCD or Flux for automated deployments
-2. **Image Registry:** Use AWS ECR with image scanning
-3. **Pipeline:** GitHub Actions / GitLab CI / Jenkins
-4. **Testing:** Automated testing before deployment
-5. **Progressive Delivery:** Canary or blue-green deployments
-
-## Contributing
-
-1. Create a feature branch
-2. Make changes
-3. Test thoroughly
-4. Submit pull request
-5. Ensure all checks pass
-
-## Support
-
-For issues and questions:
-
-- Check documentation in `docs/`
-- Review existing issues
-- Contact the infrastructure team
-
-## License
-
-Private repository - internal use only

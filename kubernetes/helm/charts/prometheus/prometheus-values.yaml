@@ -1,0 +1,63 @@
+# -----------------------------------------------------------------------------
+# kube-prometheus-stack values for EKS
+# Grafana credentials are stored in Kubernetes Secret, not in GitHub
+# -----------------------------------------------------------------------------
+
+global:
+  rbac:
+    create: true
+  scrape_interval: 30s
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    scrapeInterval: 30s
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 250m
+        memory: 512Mi
+    storageSpec: {}
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    retention: 120h
+
+grafana:
+  enabled: true
+
+  # Reference existing Kubernetes secret for admin credentials
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  service:
+    type: LoadBalancer
+
+  persistence:
+    enabled: false
+    size: 5Gi
+
+  defaultDashboardsEnabled: true
+
+  sidecar:
+    dashboards:
+      enabled: true
+    datasources:
+      enabled: true
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
+
